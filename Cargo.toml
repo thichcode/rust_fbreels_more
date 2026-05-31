@@ -1,6 +1,6 @@
 [package]
 name = "fb-reels-lite"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Lightweight Facebook Reels viewer with auto-scroll"
 license = "MIT"
