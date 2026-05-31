@@ -10,31 +10,20 @@
 
     function log(m) { console.log('[FB] ' + m); }
 
-    function doScroll() {
+    function post(msg) {
+        try {
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(JSON.stringify({ type: msg }));
+            }
+        } catch(e) {}
+    }
+
+    function scrollNext() {
         var now = Date.now();
         if (now - lastScroll < 2000) return;
         lastScroll = now;
-        log('SCROLL!');
-
-        // Container scroll
-        document.querySelectorAll('div').forEach(function(d) {
-            var cs = getComputedStyle(d);
-            if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') &&
-                d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 200) {
-                d.scrollBy({ top: d.clientHeight, behavior: 'smooth' });
-            }
-        });
-
-        // Wheel fallback
-        var v = document.querySelector('video');
-        if (v) {
-            var p = v;
-            for (var i = 0; i < 10 && p.parentElement; i++) p = p.parentElement;
-            p.dispatchEvent(new WheelEvent('wheel', { deltaY: 800, bubbles: true }));
-        }
-
-        // Keyboard fallback
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true }));
+        log('SCROLL NEXT → IPC');
+        post('scroll_next');
     }
 
     function check() {
@@ -43,7 +32,7 @@
 
         var t = v.currentTime;
 
-        // Video reset về 0 → reel mới → reset flag
+        // Video reset về 0 → reel mới
         if (wasEnded && t < 1) {
             wasEnded = false;
             log('NEW REEL');
@@ -51,7 +40,6 @@
 
         if (wasEnded) return;
 
-        // Detect: ended, paused at end, or near end
         var done = v.ended ||
                    (v.paused && t > 2 && lastTime > t) ||
                    (v.duration - t < 1.5 && t > 1);
@@ -61,10 +49,10 @@
         if (done) {
             wasEnded = true;
             log('DONE ' + t.toFixed(1) + '/' + v.duration.toFixed(1));
-            doScroll();
+            scrollNext();
         }
     }
 
     setInterval(check, 500);
-    log('READY');
+    log('READY - IPC mode');
 })();
