@@ -6,7 +6,8 @@
 
     var lastScroll = 0;
     var lastTime = 0;
-    var lastDuration = 0;
+    var loopCount = 0;
+    var lastVideoSrc = '';
 
     function log(m) { console.log('[FB] ' + m); }
 
@@ -20,8 +21,9 @@
 
     function scrollNext() {
         var now = Date.now();
-        if (now - lastScroll < 2000) return;
+        if (now - lastScroll < 3000) return;
         lastScroll = now;
+        loopCount = 0;
         log('SCROLL NEXT');
         post('scroll_next');
     }
@@ -31,27 +33,31 @@
         if (!v || !v.duration || isNaN(v.duration)) return;
 
         var t = v.currentTime;
-        var d = v.duration;
+        var src = v.src || v.currentSrc || '';
 
-        // Video mới hoặc duration thay đổi
-        if (d !== lastDuration) {
-            lastDuration = d;
+        // Video mới → reset mọi thứ
+        if (src !== lastVideoSrc) {
+            lastVideoSrc = src;
             lastTime = 0;
-            log('NEW VIDEO dur=' + d.toFixed(1));
+            loopCount = 0;
+            log('NEW VIDEO');
+            return;
         }
 
-        // Detect video loop/replay: currentTime nhảy từ cao về thấp
-        // Ví dụ: 10.5 → 0.3 = video vừa replay
-        if (lastTime > 3 && t < 1) {
-            log('VIDEO LOOPED (' + lastTime.toFixed(1) + ' → ' + t.toFixed(1) + ')');
-            scrollNext();
-            lastTime = t;
-            return;
+        // Phát hiện loop: currentTime nhảy từ cao về thấp
+        if (lastTime > 2 && t < 1) {
+            loopCount++;
+            log('LOOP #' + loopCount + ' (' + lastTime.toFixed(1) + ' → ' + t.toFixed(1) + ')');
+
+            // Loop lần đầu → scroll ngay
+            if (loopCount >= 1) {
+                scrollNext();
+            }
         }
 
         lastTime = t;
     }
 
     setInterval(check, 300);
-    log('READY - loop detection mode');
+    log('READY');
 })();
