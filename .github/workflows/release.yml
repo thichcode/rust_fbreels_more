@@ -73,7 +73,7 @@ jobs:
       - name: Prepare release package
         shell: pwsh
         run: |
-          Copy-Item target/release/fb_reels_lite.exe fb-reels-lite-windows-x64.exe
+          Copy-Item target/release/fb-reels-lite.exe fb-reels-lite-windows-x64.exe
           Compress-Archive -Path fb-reels-lite-windows-x64.exe -DestinationPath fb-reels-lite-windows-x64.zip
           Get-Item *.exe, *.zip | Select-Object Name, Length
 

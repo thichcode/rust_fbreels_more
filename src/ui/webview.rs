@@ -1,14 +1,13 @@
 use anyhow::Result;
-use std::fs;
 use tao::window::Window;
 use wry::{WebView, WebViewBuilder, WebViewBuilderExtWindows};
 
 use crate::app::AppConfig;
 
-pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
-    let auto_scroll_js = load_js_file("js/auto_scroll.js")?;
-    let controls_js = load_js_file("js/controls.js")?;
+const AUTO_SCROLL_JS: &str = include_str!("../../js/auto_scroll.js");
+const CONTROLS_JS: &str = include_str!("../../js/controls.js");
 
+pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
     let auto_scroll_delay = config.auto_scroll.delay_ms;
     let auto_scroll_script = format!(
         "window.__FB_REELS_CONFIG__ = {{ autoScrollEnabled: {}, autoScrollDelay: {} }};",
@@ -18,8 +17,8 @@ pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
     let webview = WebViewBuilder::new()
         .with_url("https://www.facebook.com/reels/")
         .with_initialization_script(&auto_scroll_script)
-        .with_initialization_script(&auto_scroll_js)
-        .with_initialization_script(&controls_js)
+        .with_initialization_script(AUTO_SCROLL_JS)
+        .with_initialization_script(CONTROLS_JS)
         .with_ipc_handler(move |message: wry::http::Request<String>| {
             let body = message.body();
             handle_ipc_message(body);
@@ -38,11 +37,6 @@ pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
     Ok(webview)
 }
 
-fn load_js_file(path: &str) -> Result<String> {
-    let content = fs::read_to_string(path)?;
-    Ok(content)
-}
-
 fn handle_ipc_message(message: &str) {
     log::info!("IPC message: {}", message);
 
@@ -51,6 +45,9 @@ fn handle_ipc_message(message: &str) {
             match msg_type {
                 "video_ended" => {
                     log::debug!("Video ended, auto-scroll triggered");
+                }
+                "video_found" => {
+                    log::debug!("Video found in page");
                 }
                 "play_pause" => {
                     log::debug!("Play/pause toggled");
