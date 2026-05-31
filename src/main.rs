@@ -14,6 +14,7 @@ use tao::dpi::LogicalSize;
 use crate::config::ConfigManager;
 use crate::ui::console::auto_hide_console;
 use crate::ui::keyboard::{handle_keyboard_event, KeyboardAction};
+use crate::ui::keyboard_sim::send_arrow_down;
 use crate::ui::tray::TrayIcon;
 use crate::ui::webview::{create_webview, scroll_next};
 
@@ -59,7 +60,7 @@ fn main() -> Result<()> {
 
         match event {
             Event::UserEvent(UserEvent::ScrollNext) => {
-                scroll_next(&webview);
+                send_arrow_down();
             }
             Event::LoopDestroyed => {
                 log::info!("FbReelsLite shutting down");

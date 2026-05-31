@@ -49,44 +49,44 @@ pub fn create_webview(window: &Window, config: &AppConfig, proxy: EventLoopProxy
 pub fn scroll_next(webview: &WebView) {
     let js = r#"
         (function() {
-            // Strategy 1: common Facebook scroll containers
-            var selectors = [
-                'div[role="feed"]',
-                'div.x1hc1fzr',
-                'div.x6s0dn4',
-                'div.x78zum5',
-                'div.x1n2onr6',
-                'div.xh8yej3'
-            ];
-            for (var s = 0; s < selectors.length; s++) {
-                var el = document.querySelector(selectors[s]);
-                if (el && el.scrollHeight > el.clientHeight + 50) {
-                    el.scrollBy({ top: el.clientHeight, behavior: 'smooth' });
-                    return selectors[s];
+            console.log('[FB] SCROLL NEXT triggered');
+            // Strategy 1: click next reel button (down chevron)
+            var btns = document.querySelectorAll(
+                '[aria-label="Next"], ' +
+                '[aria-label="Next reel"], ' +
+                '[aria-label="Next video"], ' +
+                'div[role="button"] svg[aria-label]'
+            );
+            for (var i = 0; i < btns.length; i++) {
+                var label = btns[i].getAttribute('aria-label') || '';
+                if (/next/i.test(label)) {
+                    btns[i].click();
+                    console.log('[FB] SCROLL NEXT bằng nút: ' + label);
+                    return;
                 }
             }
-            // Strategy 2: find any scrollable div
-            var divs = document.querySelectorAll('div');
-            for (var i = 0; i < divs.length; i++) {
-                var d = divs[i];
-                var cs = getComputedStyle(d);
-                if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') &&
-                    d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 300) {
-                    d.scrollBy({ top: d.clientHeight, behavior: 'smooth' });
-                    return 'div-scroll';
+            // Strategy 2: find down-chevron SVG buttons on the right side
+            var svgs = document.querySelectorAll('div[role="button"] svg');
+            for (var i = 0; i < svgs.length; i++) {
+                var svg = svgs[i];
+                var rect = svg.getBoundingClientRect();
+                // Button on the right side of viewport = next reel button
+                if (rect.left > window.innerWidth * 0.6 && rect.top < window.innerHeight * 0.5) {
+                    var parent = svg.closest('div[role="button"]') || svg.parentElement;
+                    parent.click();
+                    console.log('[FB] SCROLL NEXT bằng SVG button');
+                    return;
                 }
             }
-            // Strategy 3: try document.documentElement
-            if (document.documentElement.scrollHeight > window.innerHeight) {
-                window.scrollBy(0, window.innerHeight);
-                return 'html';
-            }
-            // Strategy 4: try body
-            if (document.body && document.body.scrollHeight > window.innerHeight) {
-                document.body.scrollBy(0, window.innerHeight);
-                return 'body';
-            }
-            return 'none';
+            // Strategy 3: dispatch ArrowDown key event
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40,
+                bubbles: true, cancelable: true
+            }));
+            console.log('[FB] SCROLL NEXT bằng keydown');
+            // Strategy 4: fallback scroll
+            window.scrollBy(0, window.innerHeight);
+            console.log('[FB] SCROLL NEXT bằng window.scrollBy');
         })();
     "#;
     let _ = webview.evaluate_script(js);
