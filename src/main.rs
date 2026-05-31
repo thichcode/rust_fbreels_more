@@ -5,9 +5,8 @@ mod platforms;
 mod ui;
 mod updater;
 
-use std::sync::{Arc, Mutex};
 use anyhow::Result;
-use tao::event::{Event, StartCause, WindowEvent};
+use tao::event::{Event, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
 use tao::window::{Fullscreen, WindowBuilder};
 use tao::dpi::LogicalSize;
@@ -17,6 +16,10 @@ use crate::ui::console::auto_hide_console;
 use crate::ui::keyboard::{handle_keyboard_event, KeyboardAction};
 use crate::ui::tray::TrayIcon;
 use crate::ui::webview::{create_webview, scroll_next};
+
+pub enum UserEvent {
+    ScrollNext,
+}
 
 fn main() -> Result<()> {
     env_logger::init();
@@ -28,7 +31,8 @@ fn main() -> Result<()> {
     config_manager.load()?;
     let config = config_manager.get().clone();
 
-    let event_loop = EventLoopBuilder::new().build();
+    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    let proxy = event_loop.create_proxy();
 
     let mut window_builder = WindowBuilder::new()
         .with_title("FbReelsLite")
@@ -41,8 +45,7 @@ fn main() -> Result<()> {
 
     let window = window_builder.build(&event_loop)?;
 
-    let scroll_flag = Arc::new(Mutex::new(false));
-    let webview = create_webview(&window, &config, scroll_flag.clone())?;
+    let webview = create_webview(&window, &config, proxy)?;
 
     let mut tray = TrayIcon::new();
     tray.initialize()?;
@@ -55,14 +58,8 @@ fn main() -> Result<()> {
         *control_flow = ControlFlow::Wait;
 
         match event {
-            Event::NewEvents(StartCause::Poll) => {
-                if let Ok(mut flag) = scroll_flag.lock() {
-                    if *flag {
-                        *flag = false;
-                        drop(flag);
-                        scroll_next(&webview);
-                    }
-                }
+            Event::UserEvent(UserEvent::ScrollNext) => {
+                scroll_next(&webview);
             }
             Event::LoopDestroyed => {
                 log::info!("FbReelsLite shutting down");
@@ -75,7 +72,6 @@ fn main() -> Result<()> {
                             window.set_visible(false);
                             *control_flow = ControlFlow::Wait;
                         }
-                        WindowEvent::Resized(_size) => {}
                         _ => {}
                     }
                 }
