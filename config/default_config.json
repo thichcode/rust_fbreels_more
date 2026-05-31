@@ -1,0 +1,14 @@
+{
+  "window": {
+    "width": 400,
+    "height": 700,
+    "maximized": false
+  },
+  "auto_scroll": {
+    "enabled": true,
+    "delay_ms": 1500
+  },
+  "keyboard": {
+    "enabled": true
+  }
+}

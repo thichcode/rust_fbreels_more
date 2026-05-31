@@ -1,0 +1,185 @@
+name: Auto Tag & Release
+
+on:
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Check for Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag_name: ${{ steps.check.outputs.tag_name }}
+      version: ${{ steps.check.outputs.version }}
+      should_release: ${{ steps.check.outputs.should_release }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if release needed
+        id: check
+        shell: bash
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | sed 's/version = "\(.*\)"/\1/' | head -1)
+          TAG="v${VERSION}"
+          echo "Current version: ${VERSION}"
+          echo "Tag to check: ${TAG}"
+          
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists - skipping release"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag ${TAG} does not exist - will create release"
+            echo "tag_name=${TAG}" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    name: Build Release
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-release-
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Prepare release package
+        shell: pwsh
+        run: |
+          Copy-Item target/release/fb_reels_lite.exe fb-reels-lite-windows-x64.exe
+          Compress-Archive -Path fb-reels-lite-windows-x64.exe -DestinationPath fb-reels-lite-windows-x64.zip
+          Get-Item *.exe, *.zip | Select-Object Name, Length
+
+      - name: Upload exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fb-reels-lite-windows-x64.exe
+          path: fb-reels-lite-windows-x64.exe
+          retention-days: 90
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fb-reels-lite-windows-x64.zip
+          path: fb-reels-lite-windows-x64.zip
+          retention-days: 90
+
+  release:
+    name: Create Release
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    if: needs.check.outputs.should_release == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download exe artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fb-reels-lite-windows-x64.exe
+          path: release
+
+      - name: Download zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fb-reels-lite-windows-x64.zip
+          path: release
+
+      - name: List release assets
+        shell: bash
+        run: ls -la release/
+
+      - name: Generate release notes
+        id: notes
+        shell: bash
+        run: |
+          TAG="${{ needs.check.outputs.tag_name }}"
+          VERSION="${{ needs.check.outputs.version }}"
+          REPO="${{ github.repository }}"
+          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+          
+          cat > /tmp/release_notes.md << EOFRN
+          ## FbReelsLite ${TAG}
+          
+          Version ${VERSION} - Lightweight Facebook Reels viewer with auto-scroll
+          
+          ### Download
+          
+          [fb-reels-lite-windows-x64.exe](${BASE_URL}/fb-reels-lite-windows-x64.exe) - Standalone executable
+          
+          [fb-reels-lite-windows-x64.zip](${BASE_URL}/fb-reels-lite-windows-x64.zip) - Compressed archive
+          
+          ### Features
+          
+          - WebView2 Engine - Lightweight Facebook Reels client
+          - Auto-Scroll - Scroll to next reel when video ends
+          - Keyboard Shortcuts - Space, Up/Down, F, Esc
+          - System Tray - Minimize to tray
+          - Configurable - Delay, window size, auto-scroll toggle
+          
+          ### System Requirements
+          
+          - Windows 10/11 (64-bit)
+          - WebView2 Runtime (pre-installed on Windows 11)
+          - ~5MB disk space
+          
+          Built with Rust | Report Issues: https://github.com/${REPO}/issues
+          EOFRN
+          
+          NOTES=$(cat /tmp/release_notes.md)
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        run: |
+          TAG="${{ needs.check.outputs.tag_name }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${TAG}"
+          git push origin "${TAG}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check.outputs.tag_name }}
+          name: ${{ needs.check.outputs.tag_name }}
+          body: ${{ steps.notes.outputs.notes }}
+          files: |
+            release/fb-reels-lite-windows-x64.exe
+            release/fb-reels-lite-windows-x64.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
