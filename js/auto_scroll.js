@@ -1,65 +1,85 @@
 (function() {
     'use strict';
 
-    if (window.__FB_REELS_LITE_LOADED__) return;
-    window.__FB_REELS_LITE_LOADED__ = true;
+    if (window.__FB_LOADED__) return;
+    window.__FB_LOADED__ = true;
 
     var lastScroll = 0;
-    var lastVideoSrc = '';
-    var videoEnded = false;
+    var lastSrc = '';
+    var ended = false;
 
-    function log(msg) { console.log('[FbReelsLite] ' + msg); }
+    function log(m) { console.log('[FB] ' + m); }
 
-    function scrollNext() {
+    function doScroll() {
         var now = Date.now();
-        if (now - lastScroll < 1500) return;
+        if (now - lastScroll < 2000) return;
         lastScroll = now;
-        log('>>> SCROLL NEXT <<<');
-        window.scrollBy(0, window.innerHeight + 50);
+        log('SCROLL!');
+
+        // Try all possible targets
+        var targets = [];
+
+        // 1. Find scrollable containers
+        document.querySelectorAll('div').forEach(function(d) {
+            var cs = getComputedStyle(d);
+            if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') {
+                if (d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 200) {
+                    targets.push({ el: d, type: 'container scrollH=' + d.scrollHeight + ' clientH=' + d.clientHeight });
+                }
+            }
+        });
+
+        // 2. Try scrolling each container
+        for (var i = 0; i < targets.length; i++) {
+            var t = targets[i];
+            log('Try: ' + t.type);
+            t.el.scrollBy({ top: t.el.clientHeight, behavior: 'smooth' });
+
+            // Also try wheel event
+            t.el.dispatchEvent(new WheelEvent('wheel', { deltaY: 800, bubbles: true }));
+        }
+
+        // 3. Try wheel on video parent chain
+        var v = document.querySelector('video');
+        if (v) {
+            var p = v;
+            for (var j = 0; j < 10 && p.parentElement; j++) {
+                p = p.parentElement;
+            }
+            p.dispatchEvent(new WheelEvent('wheel', { deltaY: 800, bubbles: true }));
+            log('Wheel on: ' + p.tagName + '.' + (p.className || '').substring(0, 40));
+        }
+
+        // 4. Keyboard on activeElement
+        var ae = document.activeElement || document.body;
+        ['keydown', 'keypress', 'keyup'].forEach(function(type) {
+            ae.dispatchEvent(new KeyboardEvent(type, { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true }));
+        });
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true }));
+        log('Keyboard dispatched on: ' + ae.tagName);
     }
 
-    function checkVideo() {
+    function check() {
         var v = document.querySelector('video');
         if (!v) return;
 
         var src = v.src || v.currentSrc || '';
-
-        // Video src changed → new video, reset state
-        if (src && src !== lastVideoSrc) {
-            lastVideoSrc = src;
-            videoEnded = false;
-            log('NEW VIDEO src=' + src.substring(0, 60));
+        if (src && src !== lastSrc) {
+            lastSrc = src;
+            ended = false;
+            log('VIDEO ' + v.duration.toFixed(1) + 's');
         }
 
-        if (videoEnded) return;
+        if (ended) return;
 
-        // ended
-        if (v.ended) {
-            videoEnded = true;
-            log('ENDED');
-            scrollNext();
-            return;
-        }
-
-        // paused after playing
-        if (v.paused && v.currentTime > 2) {
-            videoEnded = true;
-            log('PAUSED at ' + v.currentTime.toFixed(1));
-            scrollNext();
-            return;
-        }
-
-        // near end
-        if (v.duration > 0 && !isNaN(v.duration) && v.duration !== Infinity) {
-            var remain = v.duration - v.currentTime;
-            if (remain < 1.5) {
-                videoEnded = true;
-                log('NEAR END remain=' + remain.toFixed(1));
-                scrollNext();
-            }
+        if (v.ended || (v.paused && v.currentTime > 2) ||
+            (v.duration > 0 && v.duration - v.currentTime < 1.5 && v.currentTime > 1)) {
+            ended = true;
+            log('DONE (' + v.currentTime.toFixed(1) + '/' + v.duration.toFixed(1) + ')');
+            doScroll();
         }
     }
 
-    setInterval(checkVideo, 500);
+    setInterval(check, 500);
     log('READY');
 })();
