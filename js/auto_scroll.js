@@ -5,8 +5,8 @@
     window.__FB_LOADED__ = true;
 
     var lastScroll = 0;
-    var lastSrc = '';
-    var ended = false;
+    var wasEnded = false;
+    var lastTime = 0;
 
     function log(m) { console.log('[FB] ' + m); }
 
@@ -16,66 +16,51 @@
         lastScroll = now;
         log('SCROLL!');
 
-        // Try all possible targets
-        var targets = [];
-
-        // 1. Find scrollable containers
+        // Container scroll
         document.querySelectorAll('div').forEach(function(d) {
             var cs = getComputedStyle(d);
-            if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') {
-                if (d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 200) {
-                    targets.push({ el: d, type: 'container scrollH=' + d.scrollHeight + ' clientH=' + d.clientHeight });
-                }
+            if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') &&
+                d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 200) {
+                d.scrollBy({ top: d.clientHeight, behavior: 'smooth' });
             }
         });
 
-        // 2. Try scrolling each container
-        for (var i = 0; i < targets.length; i++) {
-            var t = targets[i];
-            log('Try: ' + t.type);
-            t.el.scrollBy({ top: t.el.clientHeight, behavior: 'smooth' });
-
-            // Also try wheel event
-            t.el.dispatchEvent(new WheelEvent('wheel', { deltaY: 800, bubbles: true }));
-        }
-
-        // 3. Try wheel on video parent chain
+        // Wheel fallback
         var v = document.querySelector('video');
         if (v) {
             var p = v;
-            for (var j = 0; j < 10 && p.parentElement; j++) {
-                p = p.parentElement;
-            }
+            for (var i = 0; i < 10 && p.parentElement; i++) p = p.parentElement;
             p.dispatchEvent(new WheelEvent('wheel', { deltaY: 800, bubbles: true }));
-            log('Wheel on: ' + p.tagName + '.' + (p.className || '').substring(0, 40));
         }
 
-        // 4. Keyboard on activeElement
-        var ae = document.activeElement || document.body;
-        ['keydown', 'keypress', 'keyup'].forEach(function(type) {
-            ae.dispatchEvent(new KeyboardEvent(type, { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true }));
-        });
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true }));
-        log('Keyboard dispatched on: ' + ae.tagName);
+        // Keyboard fallback
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', keyCode: 40, bubbles: true }));
     }
 
     function check() {
         var v = document.querySelector('video');
-        if (!v) return;
+        if (!v || !v.duration || isNaN(v.duration)) return;
 
-        var src = v.src || v.currentSrc || '';
-        if (src && src !== lastSrc) {
-            lastSrc = src;
-            ended = false;
-            log('VIDEO ' + v.duration.toFixed(1) + 's');
+        var t = v.currentTime;
+
+        // Video reset về 0 → reel mới → reset flag
+        if (wasEnded && t < 1) {
+            wasEnded = false;
+            log('NEW REEL');
         }
 
-        if (ended) return;
+        if (wasEnded) return;
 
-        if (v.ended || (v.paused && v.currentTime > 2) ||
-            (v.duration > 0 && v.duration - v.currentTime < 1.5 && v.currentTime > 1)) {
-            ended = true;
-            log('DONE (' + v.currentTime.toFixed(1) + '/' + v.duration.toFixed(1) + ')');
+        // Detect: ended, paused at end, or near end
+        var done = v.ended ||
+                   (v.paused && t > 2 && lastTime > t) ||
+                   (v.duration - t < 1.5 && t > 1);
+
+        lastTime = t;
+
+        if (done) {
+            wasEnded = true;
+            log('DONE ' + t.toFixed(1) + '/' + v.duration.toFixed(1));
             doScroll();
         }
     }
