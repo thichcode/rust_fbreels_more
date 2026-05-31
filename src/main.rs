@@ -5,6 +5,7 @@ mod platforms;
 mod ui;
 mod updater;
 
+use std::sync::{Arc, Mutex};
 use anyhow::Result;
 use tao::event::{Event, StartCause, WindowEvent};
 use tao::event_loop::{ControlFlow, EventLoopBuilder};
@@ -15,7 +16,7 @@ use crate::config::ConfigManager;
 use crate::ui::console::auto_hide_console;
 use crate::ui::keyboard::{handle_keyboard_event, KeyboardAction};
 use crate::ui::tray::TrayIcon;
-use crate::ui::webview::create_webview;
+use crate::ui::webview::{create_webview, scroll_next};
 
 fn main() -> Result<()> {
     env_logger::init();
@@ -40,7 +41,8 @@ fn main() -> Result<()> {
 
     let window = window_builder.build(&event_loop)?;
 
-    let webview = create_webview(&window, &config)?;
+    let scroll_flag = Arc::new(Mutex::new(false));
+    let webview = create_webview(&window, &config, scroll_flag.clone())?;
 
     let mut tray = TrayIcon::new();
     tray.initialize()?;
@@ -53,7 +55,15 @@ fn main() -> Result<()> {
         *control_flow = ControlFlow::Wait;
 
         match event {
-            Event::NewEvents(StartCause::Poll) => {}
+            Event::NewEvents(StartCause::Poll) => {
+                if let Ok(mut flag) = scroll_flag.lock() {
+                    if *flag {
+                        *flag = false;
+                        drop(flag);
+                        scroll_next(&webview);
+                    }
+                }
+            }
             Event::LoopDestroyed => {
                 log::info!("FbReelsLite shutting down");
             }
@@ -77,11 +87,10 @@ fn main() -> Result<()> {
                             webview.evaluate_script(js).ok();
                         }
                         KeyboardAction::NextReel => {
-                            let js = "window.FbReelsLite?.nextReel();";
-                            webview.evaluate_script(js).ok();
+                            scroll_next(&webview);
                         }
                         KeyboardAction::PrevReel => {
-                            let js = "window.FbReelsLite?.prevReel();";
+                            let js = "window.scrollBy(0, -window.innerHeight);";
                             webview.evaluate_script(js).ok();
                         }
                         KeyboardAction::ToggleFullscreen => {

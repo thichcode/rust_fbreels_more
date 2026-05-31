@@ -1,14 +1,14 @@
 use anyhow::Result;
+use std::sync::{Arc, Mutex};
 use tao::window::Window;
 use wry::{WebView, WebViewBuilder, WebViewBuilderExtWindows};
 
 use crate::app::AppConfig;
-use crate::ui::keyboard_sim;
 
 const AUTO_SCROLL_JS: &str = include_str!("../../js/auto_scroll.js");
 const CONTROLS_JS: &str = include_str!("../../js/controls.js");
 
-pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
+pub fn create_webview(window: &Window, config: &AppConfig, scroll_flag: Arc<Mutex<bool>>) -> Result<WebView> {
     let auto_scroll_delay = config.auto_scroll.delay_ms;
     let auto_scroll_script = format!(
         "window.__FB_REELS_CONFIG__ = {{ autoScrollEnabled: {}, autoScrollDelay: {} }};",
@@ -22,7 +22,16 @@ pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
         .with_initialization_script(CONTROLS_JS)
         .with_ipc_handler(move |message: wry::http::Request<String>| {
             let body = message.body();
-            handle_ipc_message(body);
+            if let Ok(data) = serde_json::from_str::<serde_json::Value>(body) {
+                if let Some(t) = data.get("type").and_then(|v| v.as_str()) {
+                    if t == "scroll_next" {
+                        log::info!("IPC scroll_next → setting flag");
+                        if let Ok(mut flag) = scroll_flag.lock() {
+                            *flag = true;
+                        }
+                    }
+                }
+            }
         })
         .with_new_window_req_handler(|url: String, _features| {
             if url.starts_with("https://www.facebook.com") {
@@ -38,28 +47,23 @@ pub fn create_webview(window: &Window, config: &AppConfig) -> Result<WebView> {
     Ok(webview)
 }
 
-fn handle_ipc_message(message: &str) {
-    if let Ok(data) = serde_json::from_str::<serde_json::Value>(message) {
-        if let Some(msg_type) = data.get("type").and_then(|v| v.as_str()) {
-            match msg_type {
-                "scroll_next" => {
-                    log::info!("IPC: scroll_next received, sending ArrowDown via winapi");
-                    std::thread::spawn(|| {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                        keyboard_sim::send_arrow_down();
-                    });
-                }
-                "video_ended" => {
-                    log::info!("IPC: video_ended, sending ArrowDown");
-                    std::thread::spawn(|| {
-                        std::thread::sleep(std::time::Duration::from_millis(100));
-                        keyboard_sim::send_arrow_down();
-                    });
-                }
-                _ => {
-                    log::debug!("IPC: {}", msg_type);
+pub fn scroll_next(webview: &WebView) {
+    let js = r#"
+        (function() {
+            var containers = document.querySelectorAll('div');
+            for (var i = 0; i < containers.length; i++) {
+                var d = containers[i];
+                var cs = getComputedStyle(d);
+                if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') &&
+                    d.scrollHeight > d.clientHeight + 50 && d.clientHeight > 200) {
+                    d.scrollBy({ top: d.clientHeight, behavior: 'smooth' });
+                    return 'container';
                 }
             }
-        }
-    }
+            window.scrollBy(0, window.innerHeight);
+            return 'window';
+        })();
+    "#;
+    let _ = webview.evaluate_script(js);
+    log::info!("Scroll triggered");
 }
