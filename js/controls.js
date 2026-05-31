@@ -1,42 +1,19 @@
 (function() {
     'use strict';
 
+    if (window.__FB_REELS_LITE_CONTROLS_LOADED__) return;
+    window.__FB_REELS_LITE_CONTROLS_LOADED__ = true;
+
     window.FbReelsLite = window.FbReelsLite || {};
-
     window.FbReelsLite.playPause = function() {
-        var video = document.querySelector('video');
-        if (video) {
-            if (video.paused) {
-                video.play();
-            } else {
-                video.pause();
-            }
-        }
+        var v = document.querySelector('video');
+        if (v) { v.paused ? v.play() : v.pause(); }
     };
-
-    window.FbReelsLite.nextReel = function() {
-        var scrollAmount = window.innerHeight || document.documentElement.clientHeight;
-        window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
-    };
-
-    window.FbReelsLite.prevReel = function() {
-        var scrollAmount = window.innerHeight || document.documentElement.clientHeight;
-        window.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
-    };
-
+    window.FbReelsLite.nextReel = function() { window.scrollBy(0, window.innerHeight); };
+    window.FbReelsLite.prevReel = function() { window.scrollBy(0, -window.innerHeight); };
     window.FbReelsLite.toggleFullscreen = function() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            document.documentElement.requestFullscreen();
-        }
+        document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
     };
 
-    window.FbReelsLite.exitFullscreen = function() {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        }
-    };
-
-    console.log('[FbReelsLite] Controls initialized');
+    console.log('[FbReelsLite] Controls ready');
 })();
