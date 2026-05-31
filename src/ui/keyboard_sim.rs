@@ -1,7 +1,6 @@
 #[cfg(windows)]
 pub fn send_key(key_code: u16) {
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::*;
-    use windows_sys::Win32::Foundation::*;
 
     unsafe {
         let mut input = INPUT {
