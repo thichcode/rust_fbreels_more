@@ -15,7 +15,7 @@ export default {
     if (request.method === 'GET' && path.startsWith('/auth/flow/')) {
       const sessionId = path.split('/').pop();
       const fbAuthUrl = `https://www.facebook.com/login.php?skip_api_login=1&api_key=0&next=https%3A%2F%2Fwww.facebook.com%2Freels%2F&display=popup&return_session=1&session_version=3&fbapp_pres=0`;
-      await env.AUTH_KV.put(sessionId, JSON.stringify({ status: 'pending', cookies: null, redirectUrl: `${url.origin}/auth/callback/${sessionId}` }), { expirationTtl: 300 });
+      await env.AUTH_KV.put(sessionId, JSON.stringify({ status: 'pending', cookies: null }), { expirationTtl: 300 });
       return Response.redirect(fbAuthUrl, 302);
     }
 
@@ -23,7 +23,7 @@ export default {
       const sessionId = path.split('/').pop();
       const cookies = request.headers.get('Cookie') || '';
       const setCookies = request.headers.get('Set-Cookie') || '';
-      const data = JSON.stringify({ status: 'complete', cookies: setCookies || cookies, timestamp: Date.now() });
+      const data = JSON.stringify({ status: 'complete', cookies: setCookies || cookies });
       await env.AUTH_KV.put(sessionId, data, { expirationTtl: 300 });
       return new Response('Login successful! You can close this window.', {
         headers: { 'Content-Type': 'text/html' }
