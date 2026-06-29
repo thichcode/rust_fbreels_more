@@ -1,0 +1,21 @@
+{
+  "name": "@thichcode/fb-reels-tv",
+  "version": "0.1.0",
+  "description": "Facebook Reels viewer for Samsung TV with QR login",
+  "type": "module",
+  "packageType": "mods",
+  "appName": "FbReels TV",
+  "websiteURL": "https://www.facebook.com/reels/",
+  "serviceFile": "service.js",
+  "main": "src/main.js",
+  "keys": ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Back", "MediaPlayPause", "ColorF2Yellow"],
+  "files": ["index.html", "src", "service.js", "README.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "dev": "tizenbrew-kit dev",
+    "build": "tizenbrew-kit build",
+    "package": "tizenbrew-kit package",
+    "doctor": "tizenbrew-kit doctor"
+  },
+  "license": "MIT"
+}

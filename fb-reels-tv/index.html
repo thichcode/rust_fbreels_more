@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FbReels TV</title>
+</head>
+<body>
+  <div id="fb-reels-status">Loading FbReels TV...</div>
+  <script>
+    window.onerror = function (message, source, line) {
+      var el = document.getElementById('fb-reels-status');
+      if (el) el.textContent = 'Error: ' + message + ' (line ' + line + ')';
+    };
+  </script>
+  <script src="./src/main.js"></script>
+</body>
+</html>
