@@ -1,7 +1,7 @@
 {
   "name": "@kv8n2oryk/fb-reels-tv",
   "appName": "FbReels TV",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Facebook Reels viewer for Samsung TV with auto-scroll and remote controls",
   "packageType": "mods",
   "websiteURL": "https://www.facebook.com/reels/",
