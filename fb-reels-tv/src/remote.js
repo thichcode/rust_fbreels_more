@@ -5,6 +5,14 @@
 
   console.log('[FbReelsTV] remote module loaded');
 
+  // Register TV remote keys (skip failures - may already be registered)
+  if (typeof tizen !== 'undefined' && tizen.tvinputdevice) {
+    var REGISTER_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Back'];
+    for (var i = 0; i < REGISTER_KEYS.length; i++) {
+      try { tizen.tvinputdevice.registerKey(REGISTER_KEYS[i]); } catch (e) {}
+    }
+  }
+
   var KEY_MAP = {
     'ArrowUp': 'prev',
     'ArrowDown': 'next',
