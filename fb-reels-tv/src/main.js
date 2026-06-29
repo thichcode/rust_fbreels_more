@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  var CDN_BASE = 'https://cdn.jsdelivr.net/npm/@kv8n2oryk/fb-reels-tv';
+
   var state = {
     authed: false,
     autoScrollEnabled: true
@@ -15,7 +17,7 @@
   function injectStyles() {
     var link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = './src/style.css';
+    link.href = CDN_BASE + '/src/style.css';
     document.head.appendChild(link);
   }
 
@@ -82,10 +84,10 @@
 
   function startReels() {
     var rScript = document.createElement('script');
-    rScript.src = './src/reels.js';
+    rScript.src = CDN_BASE + '/src/reels.js';
     document.body.appendChild(rScript);
     var remScript = document.createElement('script');
-    remScript.src = './src/remote.js';
+    remScript.src = CDN_BASE + '/src/remote.js';
     document.body.appendChild(remScript);
   }
 
