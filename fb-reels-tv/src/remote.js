@@ -44,8 +44,6 @@
         var overlay = document.getElementById('fb-reels-auth-overlay');
         if (overlay) {
           overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
-        } else if (window.FbReelsTVAuth) {
-          window.FbReelsTVAuth.start('__WORKER_URL__', function () {});
         }
         break;
       case 'toggleAutoscroll':

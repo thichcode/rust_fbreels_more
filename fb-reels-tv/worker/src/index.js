@@ -78,9 +78,14 @@ async function handleLoginSubmit(request, sessionId, env) {
 
   const cookies = extractSetCookies(fbRes.headers);
 
-  if (cookies.length > 0) {
+  if (cookies.length > 0 && hasSessionCookies(cookies)) {
     await env.AUTH_KV.put(sessionId, JSON.stringify({ status: 'complete', cookies }), { expirationTtl: 300 });
     return html(loginSuccessHtml());
+  }
+
+  if (cookies.length > 0) {
+    await env.AUTH_KV.put(sessionId, JSON.stringify({ status: 'error', error: 'Facebook did not return a valid session' }), { expirationTtl: 300 });
+    return html(loginForm(sessionId, 'Facebook did not return a valid session. Please try again.'));
   }
 
   const text = await fbRes.text().catch(() => '');
@@ -97,6 +102,11 @@ async function handleLoginSubmit(request, sessionId, env) {
 
   await env.AUTH_KV.put(sessionId, JSON.stringify({ status: 'error', error: 'No session received' }), { expirationTtl: 300 });
   return html(loginForm(sessionId, 'Could not complete login. Facebook may be blocking this request.'));
+}
+
+function hasSessionCookies(cookies) {
+  return cookies.some(function(c) { return c.startsWith('c_user='); }) &&
+         cookies.some(function(c) { return c.startsWith('xs='); });
 }
 
 function extractSetCookies(headers) {

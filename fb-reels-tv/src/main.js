@@ -2,8 +2,7 @@
   'use strict';
 
   var CONFIG = {
-    workerUrl: '__WORKER_URL__',
-    autoScroll: true
+    workerUrl: '__WORKER_URL__'
   };
 
   var state = {
@@ -40,6 +39,9 @@
   }
 
   function startAuth() {
+    var qrScript = document.createElement('script');
+    qrScript.src = './src/qr-lib.js';
+    document.body.appendChild(qrScript);
     var script = document.createElement('script');
     script.src = './src/auth.js';
     script.onload = function () {
