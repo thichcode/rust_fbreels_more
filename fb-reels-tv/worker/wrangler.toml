@@ -1,0 +1,8 @@
+name = "fb-reels-auth"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = ""
+preview_id = ""
