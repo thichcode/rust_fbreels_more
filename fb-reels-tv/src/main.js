@@ -1,20 +1,15 @@
 (function () {
   'use strict';
 
-  var CONFIG = {
-    workerUrl: '__WORKER_URL__'
-  };
-
   var state = {
     authed: false,
-    sessionId: null,
     autoScrollEnabled: true
   };
 
   function init() {
     console.log('[FbReelsTV] init');
     injectStyles();
-    checkAuth();
+    restoreCookies();
   }
 
   function injectStyles() {
@@ -22,6 +17,20 @@
     link.rel = 'stylesheet';
     link.href = './src/style.css';
     document.head.appendChild(link);
+  }
+
+  function restoreCookies() {
+    var saved = localStorage.getItem('fb_cookies');
+    if (saved) {
+      try {
+        var cookies = JSON.parse(saved);
+        cookies.forEach(function (c) {
+          document.cookie = c + '; path=/; domain=.facebook.com';
+        });
+        console.log('[FbReelsTV] restored ' + cookies.length + ' cookies');
+      } catch (e) {}
+    }
+    checkAuth();
   }
 
   function checkAuth() {
@@ -33,24 +42,42 @@
       console.log('[FbReelsTV] already authed');
       startReels();
     } else {
-      console.log('[FbReelsTV] not authed, show QR');
-      startAuth();
+      console.log('[FbReelsTV] not authed');
+      showLoginPrompt();
     }
   }
 
-  function startAuth() {
-    var qrScript = document.createElement('script');
-    qrScript.src = './src/qr-lib.js';
-    document.body.appendChild(qrScript);
-    var script = document.createElement('script');
-    script.src = './src/auth.js';
-    script.onload = function () {
-      window.FbReelsTVAuth.start(CONFIG.workerUrl, function () {
+  function showLoginPrompt() {
+    var div = document.createElement('div');
+    div.id = 'fb-reels-auth-overlay';
+    div.innerHTML =
+      '<div id="fb-reels-auth-box">' +
+        '<h2>Facebook Reels</h2>' +
+        '<p>Use the TV remote to log in to Facebook below.<br>Cookies will be saved automatically for next time.</p>' +
+        '<p style="font-size:14px;color:#888">Press <strong>Back</strong> on remote to hide this message</p>' +
+      '</div>';
+    document.body.appendChild(div);
+    // Monitor for login
+    var checkTimer = setInterval(function () {
+      var ck = document.cookie.split(';').filter(function (c) {
+        return c.trim().startsWith('c_user=') || c.trim().startsWith('xs=');
+      });
+      if (ck.length >= 2) {
+        clearInterval(checkTimer);
+        saveCookies();
+        div.style.display = 'none';
         state.authed = true;
         startReels();
-      });
-    };
-    document.body.appendChild(script);
+      }
+    }, 2000);
+  }
+
+  function saveCookies() {
+    var cookies = document.cookie.split(';').map(function (c) { return c.trim(); });
+    try {
+      localStorage.setItem('fb_cookies', JSON.stringify(cookies));
+      console.log('[FbReelsTV] cookies saved');
+    } catch (e) {}
   }
 
   function startReels() {
@@ -61,12 +88,6 @@
     remScript.src = './src/remote.js';
     document.body.appendChild(remScript);
   }
-
-  window.addEventListener('message', function (e) {
-    if (e.data && e.data.type === 'setAutoScroll') {
-      state.autoScrollEnabled = e.data.value;
-    }
-  });
 
   window.__FB_REELS_TV__ = state;
 

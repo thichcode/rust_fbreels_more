@@ -1,15 +1,14 @@
 {
   "name": "@thichcode/fb-reels-tv",
   "version": "0.1.0",
-  "description": "Facebook Reels viewer for Samsung TV with QR login",
+  "description": "Facebook Reels viewer for Samsung TV with auto-scroll and remote controls",
   "type": "module",
   "packageType": "mods",
   "appName": "FbReels TV",
   "websiteURL": "https://www.facebook.com/reels/",
-  "serviceFile": "service.js",
   "main": "src/main.js",
   "keys": ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Back", "MediaPlayPause", "ColorF2Yellow"],
-  "files": ["index.html", "src", "service.js", "README.md"],
+  "files": ["index.html", "src", "README.md"],
   "publishConfig": { "access": "public" },
   "scripts": {
     "dev": "tizenbrew-kit dev",

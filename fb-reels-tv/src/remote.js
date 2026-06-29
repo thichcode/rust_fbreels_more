@@ -22,13 +22,10 @@
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('[FbReelsTV] key: ' + e.key + ' → ' + action);
-
     switch (action) {
       case 'next':
-        if (window.__FB_REELS_TV__.triggerScroll) {
+        if (window.__FB_REELS_TV__.triggerScroll)
           window.__FB_REELS_TV__.triggerScroll();
-        }
         break;
       case 'prev':
         window.scrollBy(0, -window.innerHeight);
@@ -42,17 +39,13 @@
         break;
       case 'back':
         var overlay = document.getElementById('fb-reels-auth-overlay');
-        if (overlay) {
+        if (overlay)
           overlay.style.display = overlay.style.display === 'none' ? 'flex' : 'none';
-        }
         break;
       case 'toggleAutoscroll':
         state.autoScrollEnabled = !state.autoScrollEnabled;
-        if (window.__FB_REELS_TV__.showToast) {
-          window.__FB_REELS_TV__.showToast(
-            'Auto-scroll: ' + (state.autoScrollEnabled ? 'ON' : 'OFF')
-          );
-        }
+        if (window.__FB_REELS_TV__.showToast)
+          window.__FB_REELS_TV__.showToast('Auto-scroll: ' + (state.autoScrollEnabled ? 'ON' : 'OFF'));
         break;
     }
   });
@@ -60,10 +53,8 @@
   function findMainVideo() {
     var videos = document.querySelectorAll('video');
     for (var i = 0; i < videos.length; i++) {
-      var v = videos[i];
-      if (v.offsetWidth > 200 && v.offsetHeight > 300) {
-        return v;
-      }
+      if (videos[i].offsetWidth > 200 && videos[i].offsetHeight > 300)
+        return videos[i];
     }
     return null;
   }
