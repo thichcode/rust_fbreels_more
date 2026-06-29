@@ -1,20 +1,11 @@
 {
-  "name": "@thichcode/fb-reels-tv",
-  "version": "0.1.0",
-  "description": "Facebook Reels viewer for Samsung TV with auto-scroll and remote controls",
-  "type": "module",
-  "packageType": "mods",
+  "name": "@kv8n2oryk/fb-reels-tv",
   "appName": "FbReels TV",
+  "version": "0.1.1",
+  "description": "Facebook Reels viewer for Samsung TV with auto-scroll and remote controls",
+  "packageType": "mods",
   "websiteURL": "https://www.facebook.com/reels/",
   "main": "src/main.js",
   "keys": ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Enter", "Back", "MediaPlayPause", "ColorF2Yellow"],
-  "files": ["index.html", "src", "README.md"],
-  "publishConfig": { "access": "public" },
-  "scripts": {
-    "dev": "tizenbrew-kit dev",
-    "build": "tizenbrew-kit build",
-    "package": "tizenbrew-kit package",
-    "doctor": "tizenbrew-kit doctor"
-  },
   "license": "MIT"
 }
