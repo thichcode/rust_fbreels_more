@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  try {
+    if (window.top !== window.self) return;
+  } catch (e) {
+    return;
+  }
+  if (window.__FB_REELS_TV_LOADED__) return;
+  window.__FB_REELS_TV_LOADED__ = true;
+
   var state = {
     authed: false,
     autoScrollEnabled: true,
